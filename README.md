@@ -55,7 +55,7 @@ python mcd_quant.py optimize --store 1950212 --budget 30 --json     # 机器可�
 python mcd_quant.py optimize --offline --budget 30
 
 # 5) 测试（离线，确定性）
-python tests/test_mcd_quant.py        # 10/10 OK
+python tests/test_mcd_quant.py        # 14/14 OK
 ```
 
 ## 目标用户
@@ -73,14 +73,14 @@ python tests/test_mcd_quant.py        # 10/10 OK
 | `WAIT` | 篮子可行但未达上述阈值 |
 | `SKIP` | 约束下无可行篮子 |
 
-置信度 = `0.4 + 0.6 × (效率比 − 1)`，封顶 0.99；SKIP 恒为 0。
+置信度 = `max(0.10, 0.4 + 0.6 × (效率比 − 1))`，封顶 0.99；仅 SKIP（无可行篮子）为 0。
 
 ## 架构
 
 ```text
 mcd_quant.py            单文件 CLI：MCP 客户端 + 解析器 + 确定性搜索引擎 + 计价复核
 fixtures/demo_fixture.json  2026-10-25 门店 1950212 快照（公开菜单+营养，无账户数据）
-tests/test_mcd_quant.py     10 项离线确定性测试
+tests/test_mcd_quant.py     14 项离线确定性测试
 SKILL.md                 WorkBuddy Skill 封装（供 Agent 调用）
 MCP_INTEGRATION.md       MCP Server / Tool / 调用流程 / 实测读数 / 服务端行为适配
 mcp-config.example.json  脱敏配置示例（仅 ${MCD_TOKEN} 占位符）

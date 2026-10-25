@@ -44,6 +44,7 @@ EFFICIENCY_RATIO_MIN = 1.15   # best-per-yuan vs pool median, required for BUY
 HEADROOM = 1.10               # constraint headroom required for BUY
 CONFIDENCE_BASE = 0.4         # confidence = base + slope * (ratio - 1)
 CONFIDENCE_SLOPE = 0.6
+CONFIDENCE_FLOOR = 0.10       # any feasible basket keeps a minimal signal
 CONFIDENCE_CAP = 0.99
 
 VERDICTS = ("BUY", "WAIT", "SKIP")
@@ -171,6 +172,9 @@ class McpClient:
                         pass
         if structured is None:
             raise McpError("tool %s: no structuredContent" % name)
+        if isinstance(structured, dict) and structured.get("success") is False:
+            raise McpError("tool %s API error %s: %s" % (
+                name, structured.get("code"), structured.get("message")))
         return deep_fix(structured)
 
     def list_tools(self):
@@ -360,13 +364,16 @@ def optimize(items, budget, objective="protein", min_protein=0.0, min_kcal=0.0):
                                 % (budget, min_protein, min_kcal)]}
 
         _, combo, price, kcal, protein, lines = best
-        ratio = (protein / price) if price > 0 else 0.0
+        # efficiency must be measured in the objective's own unit
+        metric = protein if objective == "protein" else kcal
+        ratio = (metric / price) if price > 0 else 0.0
         eff = ratio / med if med else 0.0
         feasible_headroom = (protein >= min_protein * HEADROOM and
                              kcal >= min_kcal * HEADROOM)
         verdict = "BUY" if (eff >= EFFICIENCY_RATIO_MIN and feasible_headroom) else "WAIT"
         confidence = min(CONFIDENCE_CAP,
-                         max(0.0, CONFIDENCE_BASE + CONFIDENCE_SLOPE * (eff - 1.0)))
+                         max(CONFIDENCE_FLOOR,
+                             CONFIDENCE_BASE + CONFIDENCE_SLOPE * (eff - 1.0)))
         reasons = [
             "objective=%s pool=%d median_ratio=%.3f" % (objective, len(pool), med),
             "best_ratio=%.3f efficiency=%.2fx" % (ratio, eff),

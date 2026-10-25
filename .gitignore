@@ -3,3 +3,4 @@ __pycache__/
 .env
 *.token
 fixtures_raw.json
+PROMO.md
